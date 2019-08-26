@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+   <meta charset="utf-8">
+   <title>NWM Plot</title>
+   <meta name="description" content="Plot National Water Model medium range forecast results">
+   <meta name="keywords" content="National Water Model, plot, chart">
+   <script src="https://unpkg.com/moment"></script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.min.js"></script>
+   <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.min.css">
+   <link rel="stylesheet" type="text/css" href="app.css">
+</head>
+
+<body>
+   <form id="idForm" name="idForm">
+      <div class="form-group">
+         <div class="input-group">
+            <label for="featureid">Feature ID: </label>
+            <input autofocus class="form-control" name="featureid" placeholder="Enter feature ID" type="number"
+               aria-label="Enter feature ID" value="1620851">
+            <div class="input-group-append">
+               <button class="btn btn-outline-secondary" type="submit" aria-label="Plot"
+                  style="display: none">Plot</button>
+            </div>
+         </div>
+      </div>
+   </form>
+
+   <div class="chart-container">
+      <canvas id="chart"></canvas>
+   </div>
+
+   <div style="text-align: right">
+      <a href="about.html">About</a>
+   </div>
+
+   <script src="cors.js"></script>
+   <script src="plot.js"></script>
+</body>
+
+</html>
