@@ -2,6 +2,11 @@
 
 "use strict";
 
+var _series = {
+   name: "",
+   vals: [],
+   dates: []
+};
 
 // Get URL arguments
 function getParameterByName(name, url) {
@@ -14,6 +19,29 @@ function getParameterByName(name, url) {
    return decodeURIComponent(results[2].replace(/\+/g, " ")).trim();
 }
 
+
+function download_csv() {
+   if (!_series["vals"]) {
+      alert("No series available");
+      return;
+   }
+   var csv = 'Datetime,Streamflow_cfs\n';
+   for (let index = 0; index < _series["vals"].length; index++) {
+      csv += moment(_series["dates"][index]).format("YYYY-MM-DDTHH:mmZ") + "," + _series["vals"][index];
+      csv += "\n";
+   }
+
+   var hiddenElement = document.createElement('a');
+   hiddenElement.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv);
+   hiddenElement.target = '_blank';
+   hiddenElement.download = _series["name"] + '.csv';
+   //hiddenElement.click();
+   hiddenElement.dispatchEvent(new MouseEvent(`click`, {
+      bubbles: true,
+      cancelable: true,
+      view: window
+   }));
+}
 
 function plotSeries(vals, dates, name) {
    var ctx = document.getElementById("chart");
@@ -89,6 +117,9 @@ function successCallback(headers, response) {
             name = comid;
       }
    }
+   _series["vals"] = vals;
+   _series["dates"] = dates;
+   _series["name"] = name;
    plotSeries(vals, dates, name);
 }
 
