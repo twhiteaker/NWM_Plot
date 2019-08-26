@@ -17,6 +17,7 @@ function getParameterByName(name, url) {
 
 function plotSeries(vals, dates, name) {
    var ctx = document.getElementById("chart");
+   Chart.defaults.global.defaultFontSize = 16;
    var config = {
       type: 'line',
       data: {
@@ -76,12 +77,11 @@ function successCallback(headers, response) {
    var vals = [];
    var dates = []; // 1566745200000
    var name = "";
-   var userTimezoneOffset = new Date().getTimezoneOffset() * 60000;
    for (var i = 0; i < data["features"].length; i++) {
       var f = data["features"][i];
       vals.push(f["attributes"]["egdb.dbo.medium_term_current.qout"]);
       var seconds = f["attributes"]["egdb.dbo.medium_term_current.timevalue"];
-      dates.push(moment(seconds - userTimezoneOffset));
+      dates.push(new Date(seconds));
       if (i === 0) {
          name = f["attributes"]["egdb.dbo.LargeScale_v2.gnis_name"];
          var comid = f["attributes"]["egdb.dbo.LargeScale_v2.station_id"];
