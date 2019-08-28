@@ -31,17 +31,27 @@ function download_csv() {
       csv += "\n";
    }
 
-   var hiddenElement = document.createElement('a');
-   hiddenElement.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv);
-   hiddenElement.target = '_blank';
-   hiddenElement.download = _series["name"] + '.csv';
-   //hiddenElement.click();
-   hiddenElement.dispatchEvent(new MouseEvent(`click`, {
-      bubbles: true,
-      cancelable: true,
-      view: window
-   }));
+   var filename = _series["name"] + '.csv';
+   if (navigator.msSaveOrOpenBlob) {
+      // Works for Internet Explorer and Microsoft Edge
+      var blob = new Blob([csv], {
+         type: "text/csv"
+      });
+      navigator.msSaveOrOpenBlob(blob, filename);
+   } else {
+      var hiddenElement = document.createElement('a');
+      hiddenElement.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv);
+      hiddenElement.target = '_blank';
+      hiddenElement.download = filename;
+      //hiddenElement.click();
+      hiddenElement.dispatchEvent(new MouseEvent(`click`, {
+         bubbles: true,
+         cancelable: true,
+         view: window
+      }));
+   }
 }
+
 
 function plotSeries(vals, dates, name) {
    var ctx = document.getElementById("chart");
