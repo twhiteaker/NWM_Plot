@@ -159,7 +159,7 @@ function plotSeries(series, showTotal) {
          plugins: {
             title: {
                display: true,
-               text: "Forecast for " + series.name
+               text: "Data for " + series.name
             }
          },
          scales: axes,
