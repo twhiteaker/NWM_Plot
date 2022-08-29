@@ -1,6 +1,6 @@
 # NWM_Plot
 
-National Water Model hydrographs for the 10-day forecast
+Example code for plotting National Water Model hydrographs.
 
 [Live Demo](https://twhiteaker.github.io/NWM_Plot/)
 

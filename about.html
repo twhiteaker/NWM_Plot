@@ -10,14 +10,65 @@
 </head>
 
 <body>
+   <h1>About NWM Plot</h1>
+   <p><a href="index.html">NWM Plot Demo</a></p>
+   <p><a href="https://github.com/twhiteaker/NWM_Plot" rel="noopener noreferrer">NWM Plot on GitHub</a></p>
    <p>This project demonstrates how to plot a time series of streamflow using <a href="https://www.chartjs.org/"
-         rel="noopener noreferrer">Chart.js</a>. The streamflow data originate from the 10-day forecast of NOAA's
-      <a rel="noopener noreferrer" href="https://water.noaa.gov/about/nwm">National Water Model</a>. The data are read
-      from <a href="https://www.arcgis.com/home/item.html?id=f43c154ef3b9421bbda14bc17f9e98d2"
-         rel="noopener noreferrer">a map service hosted by Esri</a>, which has the benefit of including many river
-      names.</p>
+         rel="noopener noreferrer">Chart.js</a>.
+   </p>
+   <h2>Data Sources</h2>
+   <p>
+      Streamflow data originate from the NOAA's
+      <a rel="noopener noreferrer" href="https://water.noaa.gov/about/nwm">National Water Model (NWM)</a>. The data can
+      be read
+      from two sources:
+   </p>
+   <ul>
+      <li>
+         <a href="https://www.arcgis.com/home/item.html?id=f43c154ef3b9421bbda14bc17f9e98d2" rel="noopener noreferrer">a
+            map service hosted by Esri</a> - This service is for the medium range forecast only, and is only updated
+         daily.
+         This project was initially developed for this service. With the introduction of the National Water Prediction
+         Service API for the NWM,
+         relying on Esri to harvest and provide access to the data is not required; however, it may be still beneficial
+         to use the Esri service so that plotted data match
+         with what is available from the Esri map service.
+      </li>
+      <li>
+         <a href="https://api.water.orionnetworksolutions.com/v1/docs/" rel="noopener noreferrer">National Water
+            Prediction Service (NWPS) API</a> -
+         This service is in beta at the time of this writing. It provides access to estimates of recent streamflow via
+         Analysis and Assimilation results, and the latest forecast for
+         Short Range, Medium Range, and Long Range model runs. While medium and long range forecasts include ensembles,
+         only the mean value is currently plotted for this project.
+      </li>
+   </ul>
+   <h2>Usage</h2>
    <p>All times in the chart are in the user's local time zone, even if the user is viewing a stream segment that is not
       in the user's time zone.</p>
+   <p>NWM Plot accepts these inputs:</p>
+   <ul>
+      <li>
+         Feature ID - The identifier for the National Water Model stream reach for which streamflow should be downloaded
+      </li>
+      <li>
+         Source - Choose from the four NWPS products or the Esri medium range forecast data
+      </li>
+      <li>
+         Show Cumulative Volume - Select this option to include a series representing the cumulative volume of water
+      </li>
+      <li>
+         Hide Input Form - Select this option to hide the input form. The input form is useful if you are trying out the
+         application, but you may want to hide it
+         if you are linking to the application from another page and are supplying URL arguments for data retrieval.
+      </li>
+      <li>
+         Plot - Click this to plot data after adjusting inputs.
+      </li>
+   </ul>
+   <p>
+      Use the input form and click Plot to see URL argument names and values.
+   </p>
    <p><a href="LICENSE">LICENSE</a></p>
 </body>
 

@@ -5,15 +5,21 @@ body {
    height: 100%;
 }
 
-input::-webkit-outer-spin-button,
-input::-webkit-inner-spin-button {
-   /* display: none; <- Crashes Chrome on hover */
-   -webkit-appearance: none;
-   margin: 0;
-   /* <-- Apparently some margin are still there even though it's hidden */
-}
+.spinner {
+   border: 16px solid #f3f3f3; /* Light grey */
+   border-top: 16px solid #3498db; /* Blue */
+   border-radius: 50%;
+   width: 120px;
+   height: 120px;
+   animation: spin 2s linear infinite;
+ }
+ 
+ @keyframes spin {
+   0% { transform: rotate(0deg); }
+   100% { transform: rotate(360deg); }
+ }
 
 input[type=number] {
    -moz-appearance: textfield;
-   /* Firefox */
+   /* Firefox, hide the up-down number increment button */
 }

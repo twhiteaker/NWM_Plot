@@ -4,39 +4,57 @@
 <head>
    <meta charset="utf-8">
    <title>NWM Plot</title>
-   <meta name="description" content="Plot National Water Model medium range forecast results">
+   <meta name="description" content="Plot National Water Model forecasted streamflow">
    <meta name="keywords" content="National Water Model, plot, chart">
-   <script src="https://unpkg.com/moment"></script>
-   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.min.js"></script>
-   <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.min.css">
+   <script src="moment-with-locales.min.js"></script>
+   <script src="chart.min.js"></script>
+   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet"
+      integrity="sha384-gH2yIJqKdNHPEq0n4Mqa/HGKIhSkIHeL5AyhkYV8i59U5AR6csBvApHHNl/vI1Bx" crossorigin="anonymous">
+   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-A3rJD856KowSb7dwlZdYEkO39Gagi7vIsF0jrRAoQmDKKtQBHUuLZ9AsSv4jD4Xa"
+      crossorigin="anonymous"></script>
    <link rel="stylesheet" type="text/css" href="app.css">
 </head>
 
 <body>
-   <form id="idForm" name="idForm">
-      <div class="form-group">
-         <div class="input-group">
-            <label for="featureid">Feature ID: </label>
-            <input autofocus class="form-control" name="featureid" placeholder="e.g., 1620851" type="number"
-               aria-label="Enter feature ID" value="1620851">
-            <div class="input-group-append">
-               <button class="btn btn-outline-secondary" type="submit" aria-label="Plot"
-                  style="display: none">Plot</button>
-            </div>
-         </div>
+   <form id="inputForm" name="inputForm">
+      <div class="mb-3">
+         <label for="featureid" class="form-label">Feature ID: </label>
+         <input autofocus class="form-control" id="featureid" name="featureid" placeholder="e.g., 1620851" type="number"
+            aria-label="Enter feature ID" value="1620851">
       </div>
+      <div class="mb-3">
+         <label for="src" class="form-label">Source: </label>
+         <select name="src" id="src" class="form-select">
+            <option value="nwps_aa">NWPS Analysis and Assimilation</option>
+            <option value="nwps_sr">NWPS Short Range</option>
+            <option value="nwps_mr">NWPS Medium Range</option>
+            <option value="nwps_lr">NWPS Long Range</option>
+            <option value="esri_mr">Esri Medium Range</option>
+         </select>
+      </div>
+      <div class="mb-3 form-check">
+         <input type="checkbox" class="form-check-input" id="showTotal" name="showTotal" value="true">
+         <label for="showTotal" class="form-check-label"> Show Cumulative Volume</label><br>
+      </div>
+      <div class="mb-3 form-check">
+         <input type="checkbox" class="form-check-input" id="hideForm" name="hideForm" value="true">
+         <label for="hideForm" class="form-check-label"> Hide Input Form</label><br>
+      </div>
+      <button class="btn btn-primary" type="submit" aria-label="Plot">Plot</button>
    </form>
 
-   <div class="chart-container">
+   <div>
+      <div id="spinner" class="spinner" style="display: none"></div>
       <canvas id="chart"></canvas>
    </div>
 
-   <button onclick="download_csv()">Download CSV</button>
+   <button class="btn btn-primary" onclick="downloadCSV()">Download CSV</button>
+   <button class="btn btn-primary" onclick="downloadImage()">Download Image</button>
    <div style="float: right">
       <a href="about.html">About</a>
    </div>
 
-   <script src="cors.js"></script>
    <script src="plot.js"></script>
 </body>
 
