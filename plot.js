@@ -1,38 +1,71 @@
 "use strict";
 
-const squareFeetToAcres = 0.00002296;
-
-var currentSeries = {
-   name: "",
-   vals: [],
-   totals: [],
-   dates: []
+var currentDatasets = {
+   title: "",
+   datasetArray: []
 };
 
 var currentChart = null;
 
 
+function showErr(err) {
+   spinner = document.getElementById("spinner");
+   spinner.style.display = "none";
+   alert(err.message);
+}
+
+
 function downloadCSV() {
-   if (!currentSeries["vals"]) {
-      alert("No series available");
+   if (!currentDatasets["datasetArray"]) {
+      alert("No data available");
       return;
    }
 
-   let csv = "Datetime,Streamflow_cfs";
-   const showTotal = document.getElementById("showTotal").checked;
-   if (showTotal) {
-      csv += ",Cumulative_Volume_acre_ft";
-   }
+   const dsArray = currentDatasets.datasetArray;
+   // Build the header
+   let csv = "Datetime";
+   dsArray.forEach(ds => {
+      const colName = (ds.label + "_" + ds.units).replace(/ /g, "_").replace(/-/g, "_").replace(/,/g, "").replace(/\(/g, "").replace(/\)/g, "");
+      csv += "," + colName;
+   });
    csv += "\n";
-   for (let index = 0; index < currentSeries["vals"].length; index++) {
-      csv += moment(currentSeries["dates"][index]).format("YYYY-MM-DDTHH:mmZ") + "," + currentSeries["vals"][index];
-      if (showTotal) {
-         csv += "," + currentSeries["totals"][index];
+
+   // Get all available dates
+   let allDates = [];
+   dsArray.forEach(ds => {
+      ds.data.forEach(xy => {
+         allDates.push(xy.x);
+      });
+   });
+   allDates = allDates.filter((date, i, self) =>
+      self.findIndex(d => d.getTime() === date.getTime()) === i
+   )
+
+   // Initialize an array for the values
+   let arr = Array.from(Array(allDates.length), () => new Array(dsArray.length + 1).fill(""));
+   for (let i = 0; i < allDates.length; i++) {
+      const dt = allDates[i];
+      arr[i][0] = moment(dt).format("YYYY-MM-DDTHH:mmZ");
+      // Get the value from each dataset at this datetime, if any
+      for (let j = 0; j < dsArray.length; j++) {
+         const xy = dsArray[j].data;
+         let dateIndex = xy.findIndex(function (item) {
+            return item.x.getTime() == dt.getTime();
+         });
+         if (dateIndex != -1) {
+            console.log("found you");
+            arr[i][j + 1] = xy[dateIndex].y;
+         }
       }
-      csv += "\n";
    }
 
-   const filename = currentSeries["name"] + ".csv";
+   // Add the values to the CSV
+   for (let index = 0; index < allDates.length; index++) {
+      csv += arr[index].join() + "\n";
+   }
+
+   // Create the file link and initiate download
+   const filename = currentDatasets["title"] + ".csv";
    if (navigator.msSaveOrOpenBlob) {
       // for Edge
       let blob = new Blob([csv], {
@@ -66,24 +99,57 @@ function downloadImage() {
 }
 
 
-function plotSeries(series, showTotal) {
+function plotDatasets(datasets, showTotal) {
+   // Append '4d' to the colors (alpha channel), except for the hovered index
+   function handleHover(evt, item, legend) {
+      for (let index = 0; index < legend.chart.data.datasets.length; index++) {
+         let dataset = legend.chart.data.datasets[index];
+         let newColor = null;
+         if (index != item.datasetIndex) {
+            newColor = dataset.backgroundColor.slice(0, 16) + "0.1)";
+         } else {
+            newColor = dataset.backgroundColor.slice(0, 16) + "0.9)";
+         }
+         dataset.backgroundColor = newColor;
+         dataset.borderColor = newColor;
+      }
+      legend.chart.update();
+   }
+
+   // Removes the alpha channel from background colors
+   function handleLeave(evt, item, legend) {
+      for (let index = 0; index < legend.chart.data.datasets.length; index++) {
+         let dataset = legend.chart.data.datasets[index];
+         const newColor = dataset.backgroundColor.slice(0, 16) + "0.5)";
+         dataset.backgroundColor = newColor;
+         dataset.borderColor = newColor;
+      }
+      // if (index != item.datasetIndex) {
+      //    let dataset = legend.chart.data.datasets[index];
+      //    const newColor = dataset.backgroundColor.slice(0, 16) + "0.5)";
+      //    dataset.backgroundColor = newColor;
+      //    dataset.borderColor = newColor;
+      // }
+      legend.chart.update();
+   }
+
    spinner = document.getElementById("spinner");
    spinner.style.display = "none";
 
    const ctx = document.getElementById("chart");
-
-   const timeZone = "(time zone " + Intl.DateTimeFormat().resolvedOptions().timeZone + ")";   
+   const timeZone = "(time zone " + Intl.DateTimeFormat().resolvedOptions().timeZone + ")";
    const dateOptions = {
       month: "numeric",
       day: "numeric",
       hour: "numeric",
       hour12: true
    };
-   const datetimes = series.dates.map(
-      datetime => datetime.toLocaleString("en-US", dateOptions)
-   );
+   // const datetimes = series.dates.map(
+   //    datetime => datetime.toLocaleString("en-US", dateOptions)
+   // );
 
    Chart.defaults.font.size = 16;
+   // Give charts a white background when saved
    Chart.register({
       id: "white_canvas_background_color",
       afterRender: function (c) {
@@ -100,121 +166,174 @@ function plotSeries(series, showTotal) {
       }
    });
 
-   let datasets = [{
-      label: "Streamflow",
-      backgroundColor: "rgba(0, 0, 155, 0.5)",
-      borderColor: "rgba(0, 0, 155, 0.5)",
-      data: series.vals,
-      yAxisID: "y"
-   }];
-
    let axes = {
       x: {
          title: {
             display: true,
             text: "Datetime " + timeZone
+         },
+         ticks: {
+            callback: function (label, index, labels) {
+               return moment(label).format("M/D ha");
+            }
          }
       },
       y: {
          beginAtZero: true,
          title: {
             display: true,
-            text: "Streamflow (cfs)"
+            text: "Streamflow (cfs)",
+            color: "rgba(0, 0, 125, 1)"
+         },
+         ticks: {
+            color: "rgba(0, 0, 125, 1)"
          }
       }
    }
 
    if (showTotal) {
-      datasets.push({
-         label: "Cumulative Volume",
-         backgroundColor: "rgba(0, 255, 0, 0.5)",
-         borderColor: "rgba(0, 255, 0, 0.5)",
-         data: series.totals,
-         yAxisID: "y1"
-      });
-      axes["y1"] = {
+      axes["y2"] = {
          beginAtZero: true,
          title: {
             display: true,
-            text: "Volume (acre-ft)"
+            text: "Volume (acre-ft)",
+            color: "rgba(0, 200, 0, 1)"
          },
          position: "right",
          grid: {
             drawOnChartArea: false, // only want the grid lines for one axis to show up
          },
+         ticks: {
+            color: "rgba(0, 200, 0, 1)"
+         }
       }
    }
 
    const config = {
-      type: "line",
+      type: "scatter",
       data: {
-         labels: datetimes,
-         datasets: datasets
+         datasets: datasets.datasetArray
       },
       options: {
          interaction: {
-            mode: "index",
+            mode: "point",
             intersect: true,
          },
          plugins: {
             title: {
                display: true,
-               text: "Data for " + series.name
+               text: "Data for " + datasets.title
+            },
+            legend: {
+               onHover: handleHover,
+               onLeave: handleLeave
+            },
+            tooltip: {
+               callbacks: {
+                  label: function (context) {
+                     const dt = moment(context.raw.x).format("M/D ha");
+                     let val = " " + currentDatasets.datasetArray[context.datasetIndex].units;
+                     let y = context.raw.y;
+                     if (y >= 10) {
+                        val = Math.round(y) + val;
+                     } else {
+                        val = (Math.round(y * 100) / 100) + val;
+                     }
+                     return dt + ", " + val;
+                  }
+               }
             }
          },
-         scales: axes,
+         scales: axes
       }
    };
    currentChart = new Chart(ctx, config);
-   currentSeries = series;
+   currentDatasets = datasets;
 }
 
-function showErr(err) {
-   spinner = document.getElementById("spinner");
-   spinner.style.display = "none";
-   alert(err.message);
+function calcTotals(name, lineColor, flows, timeStepSeconds, showPoints) {
+   const squareFeetToAcres = 0.00002296;
+   let xy = [];
+   let total = 0.0;
+   for (let i = 0; i < flows.length; i++) {
+      total += flows[i]["y"] * timeStepSeconds * squareFeetToAcres;
+      xy.push({
+         x: flows[i]["x"],
+         y: total
+      })
+   }
+   let dataset = {
+      label: name,
+      data: xy,
+      borderColor: lineColor,
+      backgroundColor: lineColor,
+      yAxisID: "y2",
+      showLine: true,
+      units: "acre-ft"
+   };
+   if (!showPoints) {
+      dataset["pointRadius"] = 0;
+   }
+   return dataset;
 }
+
 
 function plotEsriMr(featureid, showTotal) {
 
    function parseEsriMr(json_text) {
       let data = JSON.parse(json_text);
+      if (Object.hasOwn(data, "error")) {
+         throw new Error(data.error.message);
+      }
       if (data["features"].length === 0) {
-         alert("No data returned");
-         return;
+         throw new Error("No data returned");
       }
 
-      let vals = [];
-      let totals = [];
-      let dates = [];
-      let name = "";
-      let total = 0.0;
       const timeStepSeconds = 10800.0;
+      let datasetTitle = "";
+      let xy = [];
+
       for (let i = 0; i < data["features"].length; i++) {
          let f = data["features"][i];
          let q = f["attributes"]["egdb.dbo.medium_term_current.qout"];
-         vals.push(q);
-         total += q * timeStepSeconds * squareFeetToAcres;
-         totals.push(total);
-         let milliseconds = f["attributes"]["egdb.dbo.medium_term_current.timevalue"];
-         dates.push(new Date(milliseconds));  // client's local time
+         const milliseconds = f["attributes"]["egdb.dbo.medium_term_current.timevalue"];
+         xy.push({
+            x: new Date(milliseconds),  // client's local time
+            y: q
+         })
          if (i === 0) {
-            name = f["attributes"]["egdb.dbo.LargeScale_v2.gnis_name"];
-            let comid = f["attributes"]["egdb.dbo.LargeScale_v2.station_id"];
-            if (!name) {
-               name = comid;
+            datasetTitle = f["attributes"]["egdb.dbo.LargeScale_v2.gnis_name"];
+            if (!datasetTitle) {
+               datasetTitle = featureid;
             }
          }
       }
 
-      const series = {
-         name: name,
-         vals: vals,
-         totals: totals,
-         dates: dates
+      let lineColor = "rgba(0, 0, 125, 0.5)";
+      let dataset = {
+         label: "Streamflow",
+         data: xy,
+         borderColor: lineColor,
+         backgroundColor: lineColor,
+         yAxisID: "y",
+         showLine: true,
+         units: "cfs"
+      };
+      let datasetArray = [];
+      datasetArray.push(dataset);
+
+      if (showTotal) {
+         lineColor = "rgba(0, 200, 0, 0.5)";
+         dataset = calcTotals("Cumulative Volume", lineColor, xy, timeStepSeconds, true);
+         datasetArray.push(dataset);
+      }
+
+      const datasets = {
+         title: datasetTitle,
+         datasetArray: datasetArray
       };
 
-      return series;
+      return datasets;
    }
 
    let uri = ("https://livefeeds2.arcgis.com/arcgis/rest/services/NFIE/" +
@@ -223,27 +342,52 @@ function plotEsriMr(featureid, showTotal) {
       "&outFields=*&returnGeometry=false" +
       "&orderByFields=egdb.dbo.medium_term_current.timevalue" +
       "&resultRecordCount=80&f=pjson");
-   uri = uri.replace("{featureid}", featureid)
+   uri = uri.replace("{featureid}", featureid);
+   console.log(uri);
    fetch(uri)
       .then(response => response.text())
       .then(json_text => parseEsriMr(json_text))
-      .then(series => plotSeries(series, showTotal))
+      .then(datasets => plotDatasets(datasets, showTotal))
       .catch(err => showErr(err));
 }
 
 
-function plotNWPS(featureid, src, showTotal) {
+function plotNWPS(featureid, src, showEnsembles, showTotal) {
 
-   function parseNWPS(json_text, src) {
+   function parseSeries(name, lineColor, data, showPoints) {
+      let xy = [];
+      for (let i = 0; i < data.length; i++) {
+         xy.push({
+            x: new Date(data[i]["validTime"]),
+            y: data[i]["flow"]
+         })
+      }
+      let dataset = {
+         label: name,
+         data: xy,
+         borderColor: lineColor,
+         backgroundColor: lineColor,
+         yAxisID: "y",
+         showLine: true,
+         units: "cfs"
+      };
+      if (!showPoints) {
+         dataset["pointRadius"] = 0;
+      }
+      return dataset;
+   }
+
+   function parseNWPS(json_text, src, showEnsembles, showTotal) {
       let data = JSON.parse(json_text);
       if (Object.hasOwn(data, "code")) {
-         alert("No data returned.\n" + data["message"]);
-         return;
+         throw new Error("No data returned.\n" + data["message"]);
       }
 
       let node = null;
       let subnode = "series";
       let timeStepSeconds = 3600.0;
+      let seriesName = "Streamflow";
+      let totalSeriesName = "Cumulative Volume";
       if (src === "nwps_aa") {
          node = "analysisAssimilation";
       } else if (src === "nwps_sr") {
@@ -251,38 +395,72 @@ function plotNWPS(featureid, src, showTotal) {
       } else if (src === "nwps_mr") {
          node = "mediumRange";
          subnode = "mean"
+         if (showEnsembles) {
+            seriesName = "Streamflow (Q), mean";
+            totalSeriesName = "Cumulative Volume (V), mean";
+         }
       } else {
          node = "longRange";
          subnode = "mean"
+         if (showEnsembles) {
+            seriesName = "Streamflow (Q), mean";
+            totalSeriesName = "Cumulative Volume (V), mean";
+         }
          timeStepSeconds = 3600.0 * 6.0;
       }
 
-      let vals = [];
-      let totals = [];
-      let dates = [];
-      let name = data["reach"]["name"];
-      if (!name) {
-         name = featureid;
-      }
-      let total = 0.0;
-      data = data[node][subnode]["data"];
-      for (let i = 0; i < data.length; i++) {
-         let q = data[i]["flow"];
-         vals.push(q);
-         total += q * timeStepSeconds * squareFeetToAcres;
-         totals.push(total);
-         let dateString = data[i]["validTime"];
-         dates.push(new Date(dateString));  // client's local time
+      let datasetTitle = data["reach"]["name"];
+      if (!datasetTitle) {
+         datasetTitle = featureid;
       }
 
-      const series = {
-         name: name,
-         vals: vals,
-         totals: totals,
-         dates: dates
+      // Parse the main series, which is "series" or the ensemble mean
+      let datasetArray = [];
+      let values = data[node][subnode]["data"];
+      let lineColor = "rgba(0, 0, 125, 0.5)";
+      let dataset = parseSeries(seriesName, lineColor, values, true);
+      datasetArray.push(dataset);
+
+      // Parse ensemble members
+      if (showEnsembles) {
+         lineColor = "rgba(0, 0, 255, 0.5)";
+         data = data[node];
+         for (let index = 0; index < 16; index++) {
+            subnode = "member" + (index + 1)
+            if (Object.hasOwn(data, subnode)) {
+               seriesName = "Q " + subnode;
+               values = data[subnode]["data"];
+               dataset = parseSeries(seriesName, lineColor, values, false);
+               datasetArray.push(dataset);
+            }
+         }
+      }
+
+      // Add cumulative volume
+      let volDatasets = [];
+      if (showTotal) {
+         // Main series
+         lineColor = "rgba(0, 200, 0, 0.5)";
+         dataset = calcTotals(totalSeriesName, lineColor, datasetArray[0]["data"], timeStepSeconds, true);
+         volDatasets.push(dataset);
+         lineColor = "rgba(0, 255, 0, 0.5)";
+
+         // Ensembles, if any
+         for (let index = 1; index < datasetArray.length; index++) {
+            seriesName = "V member" + index;
+            dataset = calcTotals(seriesName, lineColor, datasetArray[index]["data"], timeStepSeconds, false);
+            volDatasets.push(dataset);
+         }
+
+         datasetArray = [...datasetArray, ...volDatasets];
+      }
+
+      const datasets = {
+         title: datasetTitle,
+         datasetArray: datasetArray
       };
 
-      return series;
+      return datasets;
    }
 
    let uri = ("https://api.water.orionnetworksolutions.com/v1/reaches/" +
@@ -300,19 +478,22 @@ function plotNWPS(featureid, src, showTotal) {
    console.log(uri);
    fetch(uri)
       .then(response => response.text())
-      .then(json_text => parseNWPS(json_text, src))
-      .then(series => plotSeries(series, showTotal))
+      .then(json_text => parseNWPS(json_text, src, showEnsembles, showTotal))
+      .then(datasets => plotDatasets(datasets, showTotal))
       .catch(err => showErr(err));
 }
 
 
-function fetchAndPlot(featureid, src, showTotal) {
+function fetchAndPlot(featureid, src, showEnsembles, showTotal) {
    spinner = document.getElementById("spinner");
    spinner.style.display = "block";
    if (src === "esri_mr") {
       plotEsriMr(featureid, showTotal);
    } else if (src === "nwps_sr" || src === "nwps_aa" || src === "nwps_mr" || src === "nwps_lr") {
-      plotNWPS(featureid, src, showTotal);
+      plotNWPS(featureid, src, showEnsembles, showTotal);
+   } else {
+      spinner.style.display = "none";
+      alert("Unknown data source: " + src);
    }
 }
 
@@ -331,6 +512,7 @@ window.onload = function () {
    let params = new URLSearchParams(location.search);
    let featureid = params.get("featureid");
    let src = params.get("src");
+   let showEnsembles = params.get("showEnsembles");
    let showTotal = params.get("showTotal");
    let hideForm = params.get("hideForm");
 
@@ -346,6 +528,13 @@ window.onload = function () {
       src = document.getElementById("src").value;
    }
 
+   if (showEnsembles === "true") {
+      showEnsembles = true;
+      document.getElementById("showEnsembles").checked = true;
+   } else {
+      showEnsembles = false;
+   }
+
    if (showTotal === "true") {
       showTotal = true;
       document.getElementById("showTotal").checked = true;
@@ -357,5 +546,5 @@ window.onload = function () {
       document.getElementById("inputForm").style.display = "none";
    }
 
-   fetchAndPlot(featureid, src, showTotal);
+   fetchAndPlot(featureid, src, showEnsembles, showTotal);
 };
