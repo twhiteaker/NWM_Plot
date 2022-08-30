@@ -1,8 +1,8 @@
 "use strict";
 
 var currentDatasets = {
-   title: "",
-   datasetArray: []
+   datasetArray: [],
+   title: ""
 };
 
 var currentChart = null;
@@ -24,7 +24,7 @@ function downloadCSV() {
    const dsArray = currentDatasets.datasetArray;
    // Build the header
    let csv = "Datetime";
-   dsArray.forEach(ds => {
+   dsArray.forEach((ds) => {
       const colName = (ds.label + "_" + ds.units).replace(/ /g, "_").replace(/-/g, "_").replace(/,/g, "").replace(/\(/g, "").replace(/\)/g, "");
       csv += "," + colName;
    });
@@ -32,14 +32,14 @@ function downloadCSV() {
 
    // Get all available dates
    let allDates = [];
-   dsArray.forEach(ds => {
-      ds.data.forEach(xy => {
+   dsArray.forEach((ds) => {
+      ds.data.forEach((xy) => {
          allDates.push(xy.x);
       });
    });
    allDates = allDates.filter((date, i, self) =>
-      self.findIndex(d => d.getTime() === date.getTime()) === i
-   )
+      self.findIndex((d) => d.getTime() === date.getTime()) === i
+   );
 
    // Initialize an array for the values
    let arr = Array.from(Array(allDates.length), () => new Array(dsArray.length + 1).fill(""));
@@ -339,10 +339,10 @@ function plotEsriMr(featureid, showTotal) {
    uri = uri.replace("{featureid}", featureid);
    console.log(uri);
    fetch(uri)
-      .then(response => response.text())
-      .then(json_text => parseEsriMr(json_text))
-      .then(datasets => plotDatasets(datasets, showTotal))
-      .catch(err => showErr(err));
+      .then((response) => response.text())
+      .then((json_text) => parseEsriMr(json_text))
+      .then((datasets) => plotDatasets(datasets, showTotal))
+      .catch((err) => showErr(err));
 }
 
 
@@ -471,10 +471,10 @@ function plotNWPS(featureid, src, showEnsembles, showTotal) {
    }
    console.log(uri);
    fetch(uri)
-      .then(response => response.text())
-      .then(json_text => parseNWPS(json_text, src, showEnsembles, showTotal))
-      .then(datasets => plotDatasets(datasets, showTotal))
-      .catch(err => showErr(err));
+      .then((response) => response.text())
+      .then((json_text) => parseNWPS(json_text, src, showEnsembles, showTotal))
+      .then((datasets) => plotDatasets(datasets, showTotal))
+      .catch((err) => showErr(err));
 }
 
 
