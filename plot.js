@@ -222,7 +222,7 @@ function plotDatasets(datasets, showTotal) {
          plugins: {
             title: {
                display: true,
-               text: "Data for " + datasets.title
+               text: datasets.title
             },
             legend: {
                onHover: handleHover,
@@ -302,9 +302,9 @@ function plotEsriMr(featureid, showTotal) {
             y: q
          })
          if (i === 0) {
-            datasetTitle = f["attributes"]["egdb.dbo.LargeScale_v2.gnis_name"];
+            datasetTitle = f["attributes"]["egdb.dbo.LargeScale_v2.gnis_name"].trim();
             if (!datasetTitle) {
-               datasetTitle = featureid;
+               datasetTitle = "COMID " + featureid;
             }
          }
       }
@@ -409,9 +409,9 @@ function plotNWPS(featureid, src, showEnsembles, showTotal) {
          timeStepSeconds = 3600.0 * 6.0;
       }
 
-      let datasetTitle = data["reach"]["name"];
+      let datasetTitle = data["reach"]["name"].trim();
       if (!datasetTitle) {
-         datasetTitle = featureid;
+         datasetTitle = "COMID " + featureid;
       }
 
       // Parse the main series, which is "series" or the ensemble mean
