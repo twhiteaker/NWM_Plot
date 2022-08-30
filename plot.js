@@ -9,7 +9,7 @@ var currentChart = null;
 
 
 function showErr(err) {
-   spinner = document.getElementById("spinner");
+   let spinner = document.getElementById("spinner");
    spinner.style.display = "none";
    alert(err.message);
 }
@@ -133,7 +133,7 @@ function plotDatasets(datasets, showTotal) {
       legend.chart.update();
    }
 
-   spinner = document.getElementById("spinner");
+   let spinner = document.getElementById("spinner");
    spinner.style.display = "none";
 
    const ctx = document.getElementById("chart");
@@ -479,7 +479,7 @@ function plotNWPS(featureid, src, showEnsembles, showTotal) {
 
 
 function fetchAndPlot(featureid, src, showEnsembles, showTotal) {
-   spinner = document.getElementById("spinner");
+   let spinner = document.getElementById("spinner");
    spinner.style.display = "block";
    if (src === "esri_mr") {
       plotEsriMr(featureid, showTotal);
