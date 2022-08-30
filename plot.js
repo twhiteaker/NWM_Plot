@@ -138,15 +138,6 @@ function plotDatasets(datasets, showTotal) {
 
    const ctx = document.getElementById("chart");
    const timeZone = "(time zone " + Intl.DateTimeFormat().resolvedOptions().timeZone + ")";
-   const dateOptions = {
-      month: "numeric",
-      day: "numeric",
-      hour: "numeric",
-      hour12: true
-   };
-   // const datetimes = series.dates.map(
-   //    datetime => datetime.toLocaleString("en-US", dateOptions)
-   // );
 
    Chart.defaults.font.size = 16;
    // Give charts a white background when saved
@@ -249,6 +240,9 @@ function plotDatasets(datasets, showTotal) {
    };
    currentChart = new Chart(ctx, config);
    currentDatasets = datasets;
+   let downloadButtons = document.getElementById("downloads");
+   downloadButtons.style.display = "inline";
+
 }
 
 function calcTotals(name, lineColor, flows, timeStepSeconds, showPoints) {
