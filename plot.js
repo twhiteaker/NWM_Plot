@@ -89,6 +89,8 @@ function downloadCSV() {
 
 
 function downloadImage() {
+   const filename = currentDatasets["title"] + ".png";
+
    if (currentChart === null) {
       alert("No chart available");
       return;
@@ -96,7 +98,7 @@ function downloadImage() {
 
    let a = document.createElement("a");
    a.href = currentChart.toBase64Image();
-   a.download = "chart.png";
+   a.download = filename;
    a.click();
 }
 
