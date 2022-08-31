@@ -1,5 +1,7 @@
 "use strict";
 
+
+
 var currentDatasets = {
    datasetArray: [],
    title: ""
@@ -494,6 +496,14 @@ function fetchAndPlot(featureid, src, showEnsembles, showTotal) {
 
 // When the window loads, read query parameters and plot data
 window.onload = function () {
+   // Don't allow scroll wheel to change feature ID
+   document.addEventListener("wheel", function (event) {
+      if (document.activeElement.type === "number" &&
+         document.activeElement.classList.contains("noscroll")) {
+         document.activeElement.blur();
+      }
+   });
+
    function setOption(selectElement, value) {
       return [...selectElement.options].some((option, index) => {
          if (option.value == value) {
