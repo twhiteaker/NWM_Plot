@@ -521,6 +521,7 @@ window.onload = function () {
    let showEnsembles = params.get("showEnsembles");
    let showTotal = params.get("showTotal");
    let hideForm = params.get("hideForm");
+   const hideAbout = params.get("hideAbout");
 
    if (featureid) {
       document.getElementById("featureid").value = featureid;
@@ -550,6 +551,10 @@ window.onload = function () {
 
    if (hideForm === "true") {
       document.getElementById("inputForm").style.display = "none";
+   }
+
+   if (hideAbout === "true") {
+      document.getElementById("about").style.display = "none";
    }
 
    fetchAndPlot(featureid, src, showEnsembles, showTotal);
