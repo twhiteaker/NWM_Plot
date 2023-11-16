@@ -461,7 +461,7 @@ function plotNWPS(featureid, src, showEnsembles, showTotal) {
       return datasets;
    }
 
-   let uri = ("https://api.water.orionnetworksolutions.com/v1/reaches/" +
+   let uri = ("https://preview-api.water.noaa.gov/v1/reaches/" +
       "{featureid}/streamflow?series={product}");
    uri = uri.replace("{featureid}", featureid);
    if (src === "nwps_aa") {
