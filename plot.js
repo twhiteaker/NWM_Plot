@@ -413,11 +413,15 @@ function plotNWPS(featureid, src, showEnsembles, showTotal) {
       }
 
       // Parse the main series, which is "series" or the ensemble mean
+      let hasData = false;
       let datasetArray = [];
       let values = data[node][subnode]["data"];
       let lineColor = "rgba(0, 0, 125, 0.5)";
       let dataset = parseSeries(seriesName, lineColor, values, true);
-      datasetArray.push(dataset);
+      if (values.length > 0) {
+         hasData = true;
+         datasetArray.push(dataset);
+      }
 
       // Parse ensemble members
       if (showEnsembles) {
@@ -428,10 +432,17 @@ function plotNWPS(featureid, src, showEnsembles, showTotal) {
             if (Object.hasOwn(data, subnode)) {
                seriesName = "Q " + subnode;
                values = data[subnode]["data"];
-               dataset = parseSeries(seriesName, lineColor, values, false);
-               datasetArray.push(dataset);
+               if (values.length > 0) {
+                  hasData = true;
+                  dataset = parseSeries(seriesName, lineColor, values, false);
+                  datasetArray.push(dataset);
+               }
             }
          }
+      }
+
+      if (!hasData) {
+         throw new Error("No data returned");
       }
 
       // Add cumulative volume
