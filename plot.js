@@ -337,9 +337,10 @@ function plotEsriMr(featureid, showTotal) {
    let uri = ("https://livefeeds2.arcgis.com/arcgis/rest/services/NFIE/" +
       "NationalWaterModel_Medium/MapServer/0/query?" +
       "where=egdb.dbo.LargeScale_v2.station_id={featureid}" +
-      "&outFields=*&returnGeometry=false" +
+      "&timeRelation=esriTimeRelationOverlaps" +
+      "&outFields=*&returnGeometry=false&returnTrueCurves=false" +
       "&orderByFields=egdb.dbo.medium_term_current.timevalue" +
-      "&resultRecordCount=80&f=pjson");
+      "&returnDistinctValues=false&resultRecordCount=80&f=pjson");
    uri = uri.replace("{featureid}", featureid);
    console.log(uri);
    fetch(uri)
