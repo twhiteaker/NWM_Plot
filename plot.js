@@ -161,6 +161,12 @@ function plotDatasets(datasets, showTotal) {
       }
    });
 
+   let y_axis_title = "Streamflow (cfs)";
+   // Use datasets.datasetArray[0].units for units if available
+   if (datasets.datasetArray.length > 0) {
+      y_axis_title = "Streamflow (" + datasets.datasetArray[0].units + ")";
+   }
+
    let axes = {
       x: {
          title: {
@@ -177,7 +183,7 @@ function plotDatasets(datasets, showTotal) {
          beginAtZero: true,
          title: {
             display: true,
-            text: "Streamflow (cfs)",
+            text: y_axis_title,
             color: "rgba(0, 0, 125, 1)"
          },
          ticks: {
@@ -351,6 +357,89 @@ function plotEsriMr(featureid, showTotal) {
 }
 
 
+function plotEcmwf(featureid, showTotal) {
+
+   function parseEcmwf(json_text) {
+      let data = JSON.parse(json_text);
+      if (Object.hasOwn(data, "error")) {
+         throw new Error(data.error.message);
+      }
+      if (data["features"].length === 0) {
+         throw new Error("No data returned");
+      }
+
+      const timeStepSeconds = 10800.0;
+      let datasetTitle = "";
+      let xy = [];
+
+      for (let i = 0; i < data["features"].length; i++) {
+         let f = data["features"][i];
+         let q = f["attributes"]["meanflow"];
+         const milliseconds = f["attributes"]["timevalue"];
+         xy.push({
+            x: new Date(milliseconds),  // client's local time
+            y: q
+         })
+         if (i === 0) {
+            datasetTitle = f["attributes"]["comid"];
+            if (!datasetTitle) {
+               datasetTitle = "";
+            }
+         }
+      }
+
+      let lineColor = "rgba(0, 0, 125, 0.5)";
+      let dataset = {
+         label: "Streamflow",
+         data: xy,
+         borderColor: lineColor,
+         backgroundColor: lineColor,
+         yAxisID: "y",
+         showLine: true,
+         units: "m^3/s"
+      };
+      let datasetArray = [];
+      datasetArray.push(dataset);
+
+      if (showTotal) {
+         lineColor = "rgba(0, 200, 0, 0.5)";
+         // Make a copy of the data with m3^s converted to cfs
+         let xy_cfs = [];
+         for (let i = 0; i < xy.length; i++) {
+            xy_cfs.push({
+               x: xy[i]["x"],
+               y: xy[i]["y"] * 35.3147
+            })
+         }
+         dataset = calcTotals("Cumulative Volume", lineColor, xy_cfs, timeStepSeconds, true);
+         datasetArray.push(dataset);
+      }
+
+      const datasets = {
+         title: datasetTitle,
+         datasetArray: datasetArray
+      };
+
+      return datasets;
+   }
+
+   let uri = ("https://livefeeds3dev.arcgis.com/arcgis/rest/services/GEOGLOWS/" +
+      "GlobalWaterModel_Medium/MapServer/0/query?" +
+      "where=comid={featureid}" +
+      "&time=0%2C11111111111111111111111" +
+      "&outFields=*&returnGeometry=false&returnTrueCurves=false" +
+      "&orderByFields=timevalue+ASC" +
+      "&returnDistinctValues=false&resultRecordCount=100&f=pjson");
+   uri = uri.replace("{featureid}", featureid);
+   console.log(uri);
+   fetch(uri)
+      .then((response) => response.text())
+      .then((json_text) => parseEcmwf(json_text))
+      .then((datasets) => plotDatasets(datasets, showTotal))
+      .catch((err) => showErr(err));
+}
+
+
 function plotNWPS(featureid, src, showEnsembles, showTotal) {
 
    function parseSeries(name, lineColor, data, showPoints) {
@@ -472,7 +561,7 @@ function plotNWPS(featureid, src, showEnsembles, showTotal) {
 
       return datasets;
    }
-   
+
    let uri = ("https://api.water.noaa.gov/nwps/v1/reaches/" +
       "{featureid}/streamflow?series={product}");
    uri = uri.replace("{featureid}", featureid);
@@ -499,6 +588,8 @@ function fetchAndPlot(featureid, src, showEnsembles, showTotal) {
    spinner.style.display = "block";
    if (src === "esri_mr") {
       plotEsriMr(featureid, showTotal);
+   } else if (src === "ecmwf") {
+      plotEcmwf(featureid, showTotal);
    } else if (src === "nwps_sr" || src === "nwps_aa" || src === "nwps_mr" || src === "nwps_lr") {
       plotNWPS(featureid, src, showEnsembles, showTotal);
    } else {
