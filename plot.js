@@ -104,15 +104,22 @@ function downloadImage() {
 
 
 function plotDatasets(datasets, showTotal) {
+   // Returns the "rgba(r, g, b, " portion of an rgba color string, so a new
+   // alpha value can be appended. Works regardless of how many digits r, g,
+   // and b have (unlike a fixed-length slice).
+   function rgbaPrefix(color) {
+      return color.slice(0, color.lastIndexOf(",") + 1) + " ";
+   }
+
    // Append '4d' to the colors (alpha channel), except for the hovered index
    function handleHover(evt, item, legend) {
       for (let index = 0; index < legend.chart.data.datasets.length; index++) {
          let dataset = legend.chart.data.datasets[index];
          let newColor = null;
          if (index != item.datasetIndex) {
-            newColor = dataset.backgroundColor.slice(0, 16) + "0.1)";
+            newColor = rgbaPrefix(dataset.backgroundColor) + "0.1)";
          } else {
-            newColor = dataset.backgroundColor.slice(0, 16) + "0.9)";
+            newColor = rgbaPrefix(dataset.backgroundColor) + "0.9)";
          }
          dataset.backgroundColor = newColor;
          dataset.borderColor = newColor;
@@ -124,16 +131,10 @@ function plotDatasets(datasets, showTotal) {
    function handleLeave(evt, item, legend) {
       for (let index = 0; index < legend.chart.data.datasets.length; index++) {
          let dataset = legend.chart.data.datasets[index];
-         const newColor = dataset.backgroundColor.slice(0, 16) + "0.5)";
+         const newColor = rgbaPrefix(dataset.backgroundColor) + "0.5)";
          dataset.backgroundColor = newColor;
          dataset.borderColor = newColor;
       }
-      // if (index != item.datasetIndex) {
-      //    let dataset = legend.chart.data.datasets[index];
-      //    const newColor = dataset.backgroundColor.slice(0, 16) + "0.5)";
-      //    dataset.backgroundColor = newColor;
-      //    dataset.borderColor = newColor;
-      // }
       legend.chart.update();
    }
 
@@ -158,6 +159,38 @@ function plotDatasets(datasets, showTotal) {
          ctx.fillStyle = "white";
          ctx.fillRect(0, 0, c.width, c.height);
          ctx.restore();
+      }
+   });
+
+   // Draws a text label directly on the plot for each static reference line
+   // (e.g., Esri high water threshold / flow return periods), near the
+   // right edge of the chart, instead of showing them in the legend.
+   Chart.register({
+      id: "reference_line_labels",
+      afterDatasetsDraw: function (c) {
+         const yScale = c.scales.y;
+         const chartArea = c.chartArea;
+         const ctx = c.ctx;
+         c.data.datasets.forEach(function (dataset) {
+            if (!dataset.referenceLine) {
+               return;
+            }
+            const value = dataset.data[0].y;
+            if (value > yScale.max) {
+               return; // capped off the top of the chart; nothing to label
+            }
+            const yPixel = yScale.getPixelForValue(value);
+            if (yPixel < chartArea.top || yPixel > chartArea.bottom) {
+               return;
+            }
+            ctx.save();
+            ctx.font = "12px sans-serif";
+            ctx.fillStyle = dataset.borderColor;
+            ctx.textAlign = "right";
+            ctx.textBaseline = "bottom";
+            ctx.fillText(dataset.label, chartArea.right - 4, yPixel - 2);
+            ctx.restore();
+         });
       }
    });
 
@@ -189,6 +222,66 @@ function plotDatasets(datasets, showTotal) {
          ticks: {
             color: "rgba(0, 0, 125, 1)"
          }
+      }
+   }
+
+   // Rounds "range" up to a "nice" number (1, 2, 5, or 10 times a power of
+   // ten) -- standard graph-axis rounding, per Paul Heckbert's "Nice Numbers
+   // for Graph Labels".
+   function niceNum(range, round) {
+      const exponent = Math.floor(Math.log10(range));
+      const fraction = range / Math.pow(10, exponent);
+      let niceFraction;
+      if (round) {
+         if (fraction < 1.5) {
+            niceFraction = 1;
+         } else if (fraction < 3) {
+            niceFraction = 2;
+         } else if (fraction < 7) {
+            niceFraction = 5;
+         } else {
+            niceFraction = 10;
+         }
+      } else if (fraction <= 1) {
+         niceFraction = 1;
+      } else if (fraction <= 2) {
+         niceFraction = 2;
+      } else if (fraction <= 5) {
+         niceFraction = 5;
+      } else {
+         niceFraction = 10;
+      }
+      return niceFraction * Math.pow(10, exponent);
+   }
+
+   // If any dataset is a static reference line (e.g., Esri high water
+   // threshold / flow return periods), cap the y-axis to the actual
+   // streamflow data range so those reference values -- which can be far
+   // larger than the current forecasted flow -- don't compress the real
+   // data into a sliver at the bottom of the chart. Lines above the cap
+   // simply run off the top of the chart instead of expanding the axis.
+   // The cap itself is rounded up to a "nice" tick value so the top of the
+   // axis reads like a natural continuation of the tick progression instead
+   // of an arbitrary number.
+   const hasReferenceLines = datasets.datasetArray.some((ds) => ds.referenceLine);
+   if (hasReferenceLines) {
+      let maxFlow = 0;
+      datasets.datasetArray.forEach((ds) => {
+         if (ds.referenceLine || ds.yAxisID !== "y") {
+            return;
+         }
+         ds.data.forEach((pt) => {
+            if (pt.y > maxFlow) {
+               maxFlow = pt.y;
+            }
+         });
+      });
+      if (maxFlow > 0) {
+         const targetTickCount = 5;
+         const paddedMax = maxFlow * 1.15;
+         const step = niceNum(paddedMax / (targetTickCount - 1), true);
+         axes.y.max = Math.ceil(paddedMax / step) * step;
+         axes.y.ticks.stepSize = step;
       }
    }
 
@@ -227,7 +320,12 @@ function plotDatasets(datasets, showTotal) {
             },
             legend: {
                onHover: handleHover,
-               onLeave: handleLeave
+               onLeave: handleLeave,
+               labels: {
+                  filter: function (legendItem, chartData) {
+                     return !chartData.datasets[legendItem.datasetIndex].referenceLine;
+                  }
+               }
             },
             tooltip: {
                callbacks: {
@@ -299,19 +397,60 @@ function plotEsriMr(featureid, showTotal) {
 
       for (let i = 0; i < data["features"].length; i++) {
          let f = data["features"][i];
-         let q = f["attributes"]["egdb.dbo.medium_term_current.qout"];
-         const milliseconds = f["attributes"]["egdb.dbo.medium_term_current.timevalue"];
+         let q = f["attributes"]["qout"];
+         const milliseconds = f["attributes"]["timevalue"];
          xy.push({
             x: new Date(milliseconds),  // client's local time
             y: q
          })
          if (i === 0) {
-            datasetTitle = f["attributes"]["egdb.dbo.LargeScale_v2.gnis_name"].trim();
+            datasetTitle = f["attributes"]["gnis_name"].trim();
             if (!datasetTitle) {
                datasetTitle = "COMID " + featureid;
             }
          }
       }
+
+      let datasetArray = [];
+
+      // Add high water threshold and flow return period reference lines,
+      // pushed onto datasetArray before the streamflow dataset so they draw
+      // behind it. These are static per-reach attributes (not a time
+      // series), so each is drawn as a flat, dashed line spanning the
+      // retrieved forecast period. Esri-only: NWPS and ECMWF don't return
+      // these attributes.
+      const firstAttrs = data["features"][0]["attributes"];
+      const startTime = xy[0]["x"];
+      const endTime = xy[xy.length - 1]["x"];
+
+      function addReferenceLine(name, value, lineColor) {
+         if (value === null || value === undefined || isNaN(value)) {
+            return;
+         }
+         datasetArray.push({
+            label: name,
+            data: [
+               { x: startTime, y: value },
+               { x: endTime, y: value }
+            ],
+            borderColor: lineColor,
+            backgroundColor: lineColor,
+            yAxisID: "y",
+            showLine: true,
+            pointRadius: 0,
+            borderWidth: 1.5,
+            borderDash: [6, 4],
+            units: "cfs",
+            referenceLine: true
+         });
+      }
+
+      addReferenceLine("High Water Threshold", firstAttrs["high_water_threshold"], "rgba(0, 0, 0, 0.5)");
+      addReferenceLine("50-Year Flow", firstAttrs["rf_50_0_17c"], "rgba(139, 0, 0, 0.5)");
+      addReferenceLine("25-Year Flow", firstAttrs["rf_25_0_17c"], "rgba(180, 20, 20, 0.5)");
+      addReferenceLine("10-Year Flow", firstAttrs["rf_10_0_17c"], "rgba(200, 90, 0, 0.5)");
+      addReferenceLine("5-Year Flow", firstAttrs["rf_5_0_17c"], "rgba(190, 130, 0, 0.5)");
+      addReferenceLine("2-Year Flow", firstAttrs["rf_2_0_17c"], "rgba(160, 140, 0, 0.5)");
 
       let lineColor = "rgba(0, 0, 125, 0.5)";
       let dataset = {
@@ -323,7 +462,6 @@ function plotEsriMr(featureid, showTotal) {
          showLine: true,
          units: "cfs"
       };
-      let datasetArray = [];
       datasetArray.push(dataset);
 
       if (showTotal) {
@@ -340,14 +478,14 @@ function plotEsriMr(featureid, showTotal) {
       return datasets;
    }
 
-   let uri = ("https://livefeeds2.arcgis.com/arcgis/rest/services/NFIE/" +
-      "NationalWaterModel_Medium/MapServer/0/query?" +
-      "where=egdb.dbo.LargeScale_v2.station_id={featureid}" +
-      "&time=:C11111111111111111111111" +
-      "&timeRelation=esriTimeRelationOverlaps" +
+   // Esri's preferred National Water Model feed
+   let uri = ("https://livefeeds3.arcgis.com/arcgis/rest/services/NationalWaterModel/" +
+      "Medium_Range/MapServer/0/query?" +
+      "where=station_id={featureid}" +
+      "&time=0,4102444800000" +
       "&outFields=*&returnGeometry=false&returnTrueCurves=false" +
-      "&orderByFields=egdb.dbo.medium_term_current.timevalue" +
-      "&returnDistinctValues=false&resultRecordCount=80&f=pjson");
+      "&orderByFields=timevalue" +
+      "&returnDistinctValues=false&resultRecordCount=100&f=pjson");
    uri = uri.replace("{featureid}", featureid);
    console.log(uri);
    fetch(uri)
